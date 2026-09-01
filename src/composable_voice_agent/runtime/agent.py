@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -13,12 +14,17 @@ from ..contracts import (
     AgentError,
     AgentEvent,
     AgentTextDelta,
+    AgentTurnStarted,
     ChatMessage,
     LlmCompleted,
+    LlmContext,
     LlmProvider,
     TextDelta,
+    ToolCallCompleted,
     ToolCallDelta,
+    ToolCallStarted,
     ToolContext,
+    ToolExecutionPolicy,
     ToolRegistry,
     ToolResult,
 )
@@ -35,6 +41,7 @@ class AgentRuntime:
     tools: ToolRegistry
     system_prompt: str | None = None
     max_tool_rounds: int = 4
+    tool_policy: ToolExecutionPolicy = field(default_factory=ToolExecutionPolicy)
 
     def __post_init__(self) -> None:
         if self.max_tool_rounds <= 0:
@@ -57,6 +64,7 @@ class AgentRuntime:
         if not user_text.strip():
             yield AgentError("invalid_input", "user text must be non-empty")
             return
+        yield AgentTurnStarted()
         if not conversation.messages and (context.system_prompt or self.system_prompt):
             conversation.messages.append(
                 ChatMessage(
@@ -72,7 +80,7 @@ class AgentRuntime:
                 async for event in self.llm.stream(
                     conversation.messages,
                     self.tools.definitions(),
-                    {"session_id": context.session_id},
+                    LlmContext(metadata={"session_id": context.session_id}),
                 ):
                     if isinstance(event, TextDelta):
                         text_parts.append(event.text)
@@ -84,6 +92,8 @@ class AgentRuntime:
                         completed = event
                     else:
                         raise TypeError("unsupported LLM event")
+            except asyncio.CancelledError:
+                raise
             except Exception:
                 yield AgentError("llm_error", "the language model provider failed")
                 return
@@ -111,25 +121,40 @@ class AgentRuntime:
                         "invalid_tool_call", "the model returned an incomplete tool call"
                     )
                     return
-                try:
-                    arguments = json.loads(call.arguments or "{}")
-                    if not isinstance(arguments, dict):
-                        raise ValueError("tool arguments must be an object")
-                    tool = self.tools.get(call.name)
-                    result = await tool.execute(
-                        arguments,
-                        ToolContext(context.session_id, context.identity, context.metadata),
-                    )
-                    if not isinstance(result, ToolResult):
-                        raise TypeError("tool must return ToolResult")
-                    content = result.content
-                except Exception:
-                    content = "The tool failed to execute."
+                yield ToolCallStarted(call.call_id, call.name)
+                result = await self._execute_tool(call, context)
                 conversation.messages.append(
                     ChatMessage(
-                        role="tool", content=content, tool_call_id=call.call_id, name=call.name
+                        role="tool",
+                        content=result.content,
+                        tool_call_id=call.call_id,
+                        name=call.name,
                     )
                 )
+                yield ToolCallCompleted(call.call_id, call.name, result)
+
+    async def _execute_tool(self, call: _Call, context: AgentContext) -> ToolResult:
+        try:
+            arguments = json.loads(call.arguments or "{}")
+            if not isinstance(arguments, dict):
+                raise ValueError("tool arguments must be an object")
+            tool = self.tools.get(call.name or "")
+            result = await asyncio.wait_for(
+                tool.execute(
+                    arguments,
+                    ToolContext(context.session_id, context.identity, context.metadata),
+                ),
+                timeout=self.tool_policy.timeout_seconds,
+            )
+            if not isinstance(result, ToolResult):
+                raise TypeError("tool must return ToolResult")
+            return result
+        except asyncio.CancelledError:
+            raise
+        except TimeoutError:
+            return ToolResult("The tool timed out.", success=False, error_code="tool_timeout")
+        except Exception:
+            return ToolResult("The tool failed to execute.", success=False, error_code="tool_error")
 
 
 @dataclass(slots=True)

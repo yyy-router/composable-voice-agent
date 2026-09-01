@@ -22,6 +22,8 @@ class SessionStore:
         if session is None:
             session = Session(context.session_id, context)
             self._sessions[context.session_id] = session
+        elif session.context.identity != context.identity:
+            raise ValueError("a session cannot change its identity")
         return session
 
     def remove(self, session_id: str) -> None:
