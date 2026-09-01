@@ -26,5 +26,4 @@ TtsEvent: TypeAlias = TtsAudioChunk | TtsCompleted
 
 
 class TtsProvider(Protocol):
-    def stream(self, segments: AsyncIterable[SpeechSegment]) -> AsyncIterator[TtsEvent]:
-        ...
+    def stream(self, segments: AsyncIterable[SpeechSegment]) -> AsyncIterator[TtsEvent]: ...

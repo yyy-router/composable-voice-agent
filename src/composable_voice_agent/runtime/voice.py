@@ -45,12 +45,10 @@ class VoiceRuntime:
                 system_prompt=context.system_prompt,
             )
         )
-        transcript = None
-        async for event in self.asr.stream(
-            audio_chunks, AsrContext(context.audio_format)
-        ):
-            if isinstance(event, TranscriptCompleted):
-                transcript = event.text
+        transcript: str | None = None
+        async for asr_event in self.asr.stream(audio_chunks, AsrContext(context.audio_format)):
+            if isinstance(asr_event, TranscriptCompleted):
+                transcript = asr_event.text
         if transcript is None:
             return
         async for event in self.agent.run_turn(session.conversation, transcript, context):

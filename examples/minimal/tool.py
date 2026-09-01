@@ -19,9 +19,7 @@ class EchoTool:
             },
         )
 
-    async def execute(
-        self, arguments: Mapping[str, object], context: ToolContext
-    ) -> ToolResult:
+    async def execute(self, arguments: Mapping[str, object], context: ToolContext) -> ToolResult:
         del context
         text = arguments.get("text")
         if not isinstance(text, str):

@@ -30,13 +30,11 @@ class ToolResult:
 
 class AgentTool(Protocol):
     @property
-    def definition(self) -> ToolDefinition:
-        ...
+    def definition(self) -> ToolDefinition: ...
 
     async def execute(
         self, arguments: Mapping[str, object], context: ToolContext
-    ) -> ToolResult:
-        ...
+    ) -> ToolResult: ...
 
 
 class ToolRegistry:

@@ -11,10 +11,10 @@ from composable_voice_agent.contracts import (
     ChatMessage,
     LlmCompleted,
     TextDelta,
-    ToolDefinition,
     ToolCallDelta,
-    ToolResult,
+    ToolDefinition,
     ToolRegistry,
+    ToolResult,
     TranscriptCompleted,
     VoiceSessionContext,
 )
@@ -67,6 +67,7 @@ class FakeAsr(AsrProvider):
             async for _ in audio_chunks:
                 pass
             yield TranscriptCompleted("hello")
+
         return events()
 
 

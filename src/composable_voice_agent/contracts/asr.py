@@ -39,8 +39,7 @@ AsrEvent: TypeAlias = TranscriptPreview | TranscriptCompleted | SpeechStarted | 
 class AsrProvider(Protocol):
     def stream(
         self, audio_chunks: AsyncIterable[bytes], context: AsrContext
-    ) -> AsyncIterator[AsrEvent]:
-        ...
+    ) -> AsyncIterator[AsrEvent]: ...
 
 
 class AsrError(Exception):

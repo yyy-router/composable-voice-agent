@@ -46,5 +46,4 @@ class LlmProvider(Protocol):
         messages: Sequence[ChatMessage],
         tools: Sequence[object],
         context: Mapping[str, object] | None = None,
-    ) -> AsyncIterator[LlmEvent]:
-        ...
+    ) -> AsyncIterator[LlmEvent]: ...

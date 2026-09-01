@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from uuid import uuid4
 
@@ -59,7 +59,9 @@ class AgentRuntime:
             return
         if not conversation.messages and (context.system_prompt or self.system_prompt):
             conversation.messages.append(
-                ChatMessage(role="system", content=context.system_prompt or self.system_prompt or "")
+                ChatMessage(
+                    role="system", content=context.system_prompt or self.system_prompt or ""
+                )
             )
         conversation.messages.append(ChatMessage(role="user", content=user_text))
         for round_number in range(self.max_tool_rounds + 1):
@@ -86,7 +88,9 @@ class AgentRuntime:
                 yield AgentError("llm_error", "the language model provider failed")
                 return
             if completed is None:
-                yield AgentError("llm_protocol_error", "the language model ended without completion")
+                yield AgentError(
+                    "llm_protocol_error", "the language model ended without completion"
+                )
                 return
             if not calls:
                 final_text = "".join(text_parts)
@@ -103,7 +107,9 @@ class AgentRuntime:
             )
             for call in calls.values():
                 if not call.name or call.call_id is None:
-                    yield AgentError("invalid_tool_call", "the model returned an incomplete tool call")
+                    yield AgentError(
+                        "invalid_tool_call", "the model returned an incomplete tool call"
+                    )
                     return
                 try:
                     arguments = json.loads(call.arguments or "{}")
@@ -120,7 +126,9 @@ class AgentRuntime:
                 except Exception:
                     content = "The tool failed to execute."
                 conversation.messages.append(
-                    ChatMessage(role="tool", content=content, tool_call_id=call.call_id, name=call.name)
+                    ChatMessage(
+                        role="tool", content=content, tool_call_id=call.call_id, name=call.name
+                    )
                 )
 
 
