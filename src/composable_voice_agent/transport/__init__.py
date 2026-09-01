@@ -1,5 +1,5 @@
 """Transport exports."""
 
-from .ports import AuthRequest, AuthResult, Authenticator, EventSink
+from .ports import Authenticator, AuthRequest, AuthResult, EventSink
 
 __all__ = ["AuthRequest", "AuthResult", "Authenticator", "EventSink"]
