@@ -3,6 +3,13 @@
 from dataclasses import dataclass
 from typing import TypeAlias
 
+from .tools import ToolResult
+
+
+@dataclass(frozen=True, slots=True)
+class AgentTurnStarted:
+    """The runtime accepted a new user turn."""
+
 
 @dataclass(frozen=True, slots=True)
 class AgentTextDelta:
@@ -18,6 +25,19 @@ class AgentQuestion:
 
 
 @dataclass(frozen=True, slots=True)
+class ToolCallStarted:
+    call_id: str
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class ToolCallCompleted:
+    call_id: str
+    name: str
+    result: ToolResult
+
+
+@dataclass(frozen=True, slots=True)
 class AgentCompleted:
     pass
 
@@ -28,4 +48,12 @@ class AgentError:
     message: str
 
 
-AgentEvent: TypeAlias = AgentTextDelta | AgentQuestion | AgentCompleted | AgentError
+AgentEvent: TypeAlias = (
+    AgentTurnStarted
+    | AgentTextDelta
+    | AgentQuestion
+    | ToolCallStarted
+    | ToolCallCompleted
+    | AgentCompleted
+    | AgentError
+)

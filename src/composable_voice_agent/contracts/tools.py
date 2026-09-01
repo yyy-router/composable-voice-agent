@@ -21,6 +21,15 @@ class ToolDefinition:
 
 
 @dataclass(frozen=True, slots=True)
+class ToolExecutionPolicy:
+    timeout_seconds: float = 30.0
+
+    def __post_init__(self) -> None:
+        if self.timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
+
+
+@dataclass(frozen=True, slots=True)
 class ToolResult:
     content: str
     success: bool = True
