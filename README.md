@@ -2,13 +2,13 @@
 
 A provider-neutral runtime for building composable voice agents.
 
-This project provides contracts and orchestration only. It does not contain a business domain, built-in business tools, authentication implementation, database integration, or vendor credentials.
+This project provides contracts, orchestration, and an optional WebSocket transport. It does not contain a business domain, built-in business tools, authentication implementation, database integration, or vendor credentials.
 
 ## Architecture
 
 ```text
 WebSocket transport
-        │
+        │ JSON + binary audio
         ▼
 VoiceRuntime
    ┌────┼────┐
@@ -96,6 +96,34 @@ agent = AgentRuntime(
 )
 ```
 
+### WebSocket transport
+
+The WebSocket adapter accepts one authenticated session per connection. JSON control frames use the versioned envelope below; audio is sent as binary frames rather than base64:
+
+```text
+client: session.start  → server: session.ready
+client: audio.start
+client: binary PCM chunks
+client: audio.end
+server: transcript.completed
+server: agent.event
+server: audio.started
+server: binary PCM chunks
+server: audio.completed
+server: session.completed
+```
+
+Authentication remains an application concern:
+
+```python
+from composable_voice_agent.transport import WebSocketVoiceServer
+
+server = WebSocketVoiceServer(runtime=voice_runtime, authenticator=my_authenticator)
+# Pass `server.serve` to the WebSocket framework's connection handler.
+```
+
+`AudioLimits` provides bounded chunk size, stream size, and queue size. Runtime and authentication failures sent over the wire use safe public messages; provider-specific errors stay inside the adapter.
+
 ### Provider choices
 
 Implementations of `AsrProvider`, `LlmProvider`, and `TtsProvider` are intentionally not bundled. A provider can use any API style or local runtime. The core package can also be used without voice: construct `AgentRuntime` directly when ASR and TTS are not needed.
@@ -119,8 +147,27 @@ uv run mypy
 uv run pytest
 ```
 
-The repository currently contains contracts, a tested Agent/Voice runtime foundation, and a small WebSocket message parser. Provider adapters and a complete WebSocket server are separate integration concerns.
+The repository contains contracts, a tested Agent/Voice runtime, and a provider-neutral WebSocket transport adapter. Provider implementations remain separate integration concerns.
 
 ## Scope
 
 This project deliberately does not provide a business scenario. Application authors define their own tools, system prompt, identity model, authorization policy, provider adapters, and transport authentication.
+
+## Protocol reference
+
+Every JSON control message has this shape:
+
+```json
+{
+  "version": 1,
+  "type": "audio.start",
+  "request_id": "optional-request-id",
+  "payload": {}
+}
+```
+
+See `composable_voice_agent.transport.websocket.protocol` for message constants and parsing helpers.
+
+## License
+
+Apache-2.0
