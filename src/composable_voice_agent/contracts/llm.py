@@ -1,8 +1,10 @@
 """LLM provider contracts."""
 
 from collections.abc import AsyncIterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, TypeAlias
+
+from .tools import ToolDefinition
 
 
 @dataclass(frozen=True, slots=True)
@@ -11,6 +13,13 @@ class ChatMessage:
     content: str
     tool_call_id: str | None = None
     name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class LlmContext:
+    model: str | None = None
+    temperature: float | None = None
+    metadata: Mapping[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +53,6 @@ class LlmProvider(Protocol):
     def stream(
         self,
         messages: Sequence[ChatMessage],
-        tools: Sequence[object],
-        context: Mapping[str, object] | None = None,
+        tools: Sequence[ToolDefinition],
+        context: LlmContext | None = None,
     ) -> AsyncIterator[LlmEvent]: ...
