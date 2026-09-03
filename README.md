@@ -2,7 +2,7 @@
 
 A provider-neutral runtime for building composable voice agents.
 
-This project provides contracts, orchestration, and an optional WebSocket transport. It does not contain a business domain, built-in business tools, authentication implementation, database integration, or vendor credentials.
+This project provides contracts, orchestration, deterministic reference providers, and an optional WebSocket transport. It does not contain a business domain, built-in business tools, authentication implementation, database integration, or vendor credentials.
 
 ## Architecture
 
@@ -36,27 +36,13 @@ public provider contract
 Agent / Voice events
 ```
 
-For example, an `AsrProvider` may use HTTP, WebSocket, an SDK, or a local model. It must translate vendor partial and final transcripts into `TranscriptPreview` and `TranscriptCompleted`. An `LlmProvider` translates `ChatMessage` and `ToolDefinition` into the model's request format, then yields `TextDelta`, `ToolCallDelta`, and `LlmCompleted`. A `TtsProvider` receives ordered `SpeechSegment` values and yields `TtsAudioChunk` values. No vendor-specific event names or credentials appear in the runtime.
-
-```python
-class MyLlm:
-    def stream(self, messages, tools, context=None):
-        return self._stream(messages, tools, context)
-
-    async def _stream(self, messages, tools, context):
-        request = convert_to_my_provider_format(messages, tools, context)
-        async for response in call_my_provider(request):
-            event = convert_from_my_provider_format(response)
-            if event is not None:
-                yield event
-```
+An `AsrProvider` may use HTTP, WebSocket, an SDK, or a local model. It translates vendor partial and final transcripts into `TranscriptPreview` and `TranscriptCompleted`. An `LlmProvider` translates `ChatMessage` and `ToolDefinition` into the model's request format, then yields `TextDelta`, `ToolCallDelta`, and `LlmCompleted`. A `TtsProvider` receives ordered `SpeechSegment` values and yields `TtsAudioChunk` values. No vendor-specific event names or credentials appear in the runtime.
 
 ## Public contracts
 
 ```python
 from composable_voice_agent import AgentRuntime, ToolRegistry, VoiceRuntime
 from composable_voice_agent.contracts import (
-    AgentTool,
     ToolContext,
     ToolDefinition,
     ToolResult,
@@ -98,7 +84,7 @@ agent = AgentRuntime(
 
 ### WebSocket transport
 
-The WebSocket adapter accepts one authenticated session per connection. JSON control frames use the versioned envelope below; audio is sent as binary frames rather than base64:
+The WebSocket adapter accepts one authenticated session per connection. JSON control frames use a versioned envelope; audio is sent as binary frames rather than base64:
 
 ```text
 client: session.start  → server: session.ready
@@ -124,9 +110,28 @@ server = WebSocketVoiceServer(runtime=voice_runtime, authenticator=my_authentica
 
 `AudioLimits` provides bounded chunk size, stream size, and queue size. Runtime and authentication failures sent over the wire use safe public messages; provider-specific errors stay inside the adapter.
 
-### Provider choices
+### Local reference providers
 
-Implementations of `AsrProvider`, `LlmProvider`, and `TtsProvider` are intentionally not bundled. A provider can use any API style or local runtime. The core package can also be used without voice: construct `AgentRuntime` directly when ASR and TTS are not needed.
+The package includes deterministic providers that require no API keys. They are intended for tests and local protocol exploration, not production speech recognition or synthesis:
+
+```python
+from composable_voice_agent.providers import FakeAsr, FakeLlm, FakeTts, TextResponse
+
+voice_runtime = VoiceRuntime(
+    asr=FakeAsr("hello"),
+    agent=AgentRuntime(FakeLlm([TextResponse("ready")]), ToolRegistry()),
+    tts=FakeTts(),
+)
+```
+
+A minimal FastAPI application is available in `examples/reference_server.py`:
+
+```bash
+uv sync --extra dev --extra server
+uv run uvicorn examples.reference_server:app --reload
+```
+
+The reference server uses an allow-all authenticator for local development only. Replace it before exposing a deployment.
 
 ## Design principles
 
@@ -147,7 +152,7 @@ uv run mypy
 uv run pytest
 ```
 
-The repository contains contracts, a tested Agent/Voice runtime, and a provider-neutral WebSocket transport adapter. Provider implementations remain separate integration concerns.
+The repository contains contracts, a tested Agent/Voice runtime, deterministic reference providers, and a provider-neutral WebSocket transport adapter. Real provider implementations remain separate integration concerns.
 
 ## Scope
 
