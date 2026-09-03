@@ -21,4 +21,8 @@ def test_protocol_rejects_invalid_message() -> None:
 
 
 def test_event_message_has_stable_shape() -> None:
-    assert event_message("session.ready") == {"type": "session.ready", "payload": {}}
+    assert event_message("session.ready") == {
+        "version": 1,
+        "type": "session.ready",
+        "payload": {},
+    }
