@@ -2,7 +2,7 @@
 
 A provider-neutral runtime for building composable voice agents.
 
-This project provides contracts, orchestration, deterministic reference providers, and an optional WebSocket transport. It does not contain a business domain, built-in business tools, authentication implementation, database integration, or vendor credentials.
+This project provides contracts, orchestration, deterministic reference providers, an OpenAI-compatible LLM adapter, and an optional WebSocket transport. It does not contain a business domain, built-in business tools, authentication implementation, database integration, or vendor credentials.
 
 ## Architecture
 
@@ -82,6 +82,26 @@ agent = AgentRuntime(
 )
 ```
 
+### OpenAI-compatible LLM
+
+The optional adapter supports the OpenAI Chat Completions streaming shape and works with OpenAI-compatible deployments. It uses `httpx`, so it does not force the OpenAI SDK into the core package:
+
+```python
+import os
+
+from composable_voice_agent.providers import OpenAICompatibleConfig, OpenAICompatibleLlm
+
+llm = OpenAICompatibleLlm(
+    OpenAICompatibleConfig(
+        base_url="https://api.example.com/v1",
+        api_key=os.environ["LLM_API_KEY"],
+        model="my-model",
+    )
+)
+```
+
+The adapter normalizes text deltas, fragmented tool-call arguments, usage, HTTP failures, timeouts, and malformed SSE events. Tests use an in-memory HTTP transport and never contact a real provider.
+
 ### WebSocket transport
 
 The WebSocket adapter accepts one authenticated session per connection. JSON control frames use a versioned envelope; audio is sent as binary frames rather than base64:
@@ -145,14 +165,14 @@ The reference server uses an allow-all authenticator for local development only.
 ## Development
 
 ```bash
-uv sync --extra dev
+uv sync --extra dev --extra openai-compatible --extra server
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run pytest
 ```
 
-The repository contains contracts, a tested Agent/Voice runtime, deterministic reference providers, and a provider-neutral WebSocket transport adapter. Real provider implementations remain separate integration concerns.
+The repository contains contracts, a tested Agent/Voice runtime, deterministic reference providers, an OpenAI-compatible LLM adapter, and a provider-neutral WebSocket transport adapter. Other real provider implementations remain separate integration concerns.
 
 ## Scope
 
@@ -176,3 +196,4 @@ See `composable_voice_agent.transport.websocket.protocol` for message constants 
 ## License
 
 Apache-2.0
+    
