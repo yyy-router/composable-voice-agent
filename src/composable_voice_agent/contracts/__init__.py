@@ -21,6 +21,7 @@ from .llm import (
     LlmProvider,
     LlmUsage,
     TextDelta,
+    ToolCall,
     ToolCallDelta,
 )
 from .tools import AgentTool, ToolDefinition, ToolExecutionPolicy, ToolRegistry, ToolResult
@@ -57,6 +58,7 @@ __all__ = [
     "LlmUsage",
     "SpeechSegment",
     "TextDelta",
+    "ToolCall",
     "ToolCallCompleted",
     "ToolCallDelta",
     "ToolCallStarted",

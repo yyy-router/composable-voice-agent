@@ -20,6 +20,7 @@ from ..contracts import (
     LlmContext,
     LlmProvider,
     TextDelta,
+    ToolCall,
     ToolCallCompleted,
     ToolCallDelta,
     ToolCallStarted,
@@ -112,15 +113,20 @@ class AgentRuntime:
             if round_number >= self.max_tool_rounds:
                 yield AgentError("tool_round_limit", "maximum tool rounds exceeded")
                 return
-            conversation.messages.append(
-                ChatMessage(role="assistant", content="", name="tool_calls")
-            )
+            call_messages: list[ToolCall] = []
             for call in calls.values():
                 if not call.name or call.call_id is None:
                     yield AgentError(
                         "invalid_tool_call", "the model returned an incomplete tool call"
                     )
                     return
+                call_messages.append(ToolCall(call.call_id, call.name, call.arguments))
+            conversation.messages.append(
+                ChatMessage(role="assistant", content="", tool_calls=tuple(call_messages))
+            )
+            for call in calls.values():
+                assert call.name is not None
+                assert call.call_id is not None
                 yield ToolCallStarted(call.call_id, call.name)
                 result = await self._execute_tool(call, context)
                 conversation.messages.append(
