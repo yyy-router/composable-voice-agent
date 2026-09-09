@@ -8,11 +8,19 @@ from .tools import ToolDefinition
 
 
 @dataclass(frozen=True, slots=True)
+class ToolCall:
+    call_id: str
+    name: str
+    arguments: str
+
+
+@dataclass(frozen=True, slots=True)
 class ChatMessage:
     role: str
     content: str
     tool_call_id: str | None = None
     name: str | None = None
+    tool_calls: tuple[ToolCall, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,3 +64,16 @@ class LlmProvider(Protocol):
         tools: Sequence[ToolDefinition],
         context: LlmContext | None = None,
     ) -> AsyncIterator[LlmEvent]: ...
+
+
+__all__ = [
+    "ChatMessage",
+    "LlmCompleted",
+    "LlmContext",
+    "LlmEvent",
+    "LlmProvider",
+    "LlmUsage",
+    "TextDelta",
+    "ToolCall",
+    "ToolCallDelta",
+]
